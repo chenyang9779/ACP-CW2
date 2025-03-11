@@ -2,9 +2,11 @@ package uk.ac.ed.acp.cw2.controller;
 
 
 import com.rabbitmq.client.DeliverCallback;
+import com.rabbitmq.client.impl.Environment;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uk.ac.ed.acp.cw2.data.RuntimeEnvironment;
 import com.rabbitmq.client.Channel;
@@ -17,81 +19,68 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.CheckedInputStream;
+
 
 /**
  * RabbitMqController is a REST controller that provides endpoints for sending and receiving stock symbols
  * through RabbitMQ. This class interacts with a RabbitMQ environment which is configured dynamically during runtime.
  */
 @RestController()
-@RequestMapping("/api/v1/rabbitmq")
+@RequestMapping("/rabbitMq")
 public class RabbitMqController {
 
-    private static final Logger logger = LoggerFactory.getLogger(RabbitMqController.class);
-    private final RuntimeEnvironment environment;
-    private final String[] stockSymbols = "AAPL,MSFT,GOOG,AMZN,TSLA,JPMC,CATP,UNIL,LLOY".split(",");
-
-    private ConnectionFactory factory = null;
+    private final Logger logger = LoggerFactory.getLogger(RabbitMqController.class);
+    private ConnectionFactory connectionFactory = null;
 
     public RabbitMqController(RuntimeEnvironment environment) {
-        this.environment = environment;
-        factory = new ConnectionFactory();
-        factory.setHost(environment.getRabbitMqHost());
-        factory.setPort(environment.getRabbitMqPort());
+        connectionFactory = new ConnectionFactory();
+        connectionFactory.setHost(environment.getRabbitMqHost());
+        connectionFactory.setPort(environment.getRabbitMqPort());
     }
 
+    @PutMapping("/{qeueuName}/{messageCount}")
+    public ResponseEntity<Void> put(@PathVariable String qeueuName, @PathVariable String messageCount){
+        try (Connection connection = connectionFactory.newConnection();
+            Channel channel = connection.createChannel()) {
 
-    public final String StockSymbolsConfig = "stock.symbols";
+            channel.queueDeclare(qeueuName, false, false, false, null);
 
-    @PostMapping("/sendStockSymbols/{queueName}/{symbolCount}")
-    public void sendStockSymbols(@PathVariable String queueName, @PathVariable int symbolCount) {
-        logger.info("Writing {} symbols in queue {}", symbolCount, queueName);
+            for (int i = 0; i < Integer.parseInt(messageCount); i++) {
+                String messageBody = String.format("{\"uuid\":\"s2693586\", \"count\":%d}", i);
+                channel.basicPublish("", qeueuName, null, messageBody.getBytes(StandardCharsets.UTF_8));
+            }
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.error("Failed to send message to RabbitMQ", e);
+            throw new RuntimeException("Failed to send message to RabbitMQ");
+        }
+    }
 
-        try (Connection connection = factory.newConnection();
+    @GetMapping("/{queueName}/{timeoutInMsec}")
+    public ResponseEntity<List<String>> getMessages(@PathVariable String queueName, @PathVariable String timeoutInMsec){
+        List<String> messages = new ArrayList<>();
+        long endTime = System.currentTimeMillis() + Long.parseLong(timeoutInMsec);
+
+        try (Connection connection = connectionFactory.newConnection();
              Channel channel = connection.createChannel()) {
 
             channel.queueDeclare(queueName, false, false, false, null);
+            DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+                String messageBody = new String(delivery.getBody(), StandardCharsets.UTF_8);
+                messages.add(messageBody);
+            };
+            String consumerTag = channel.basicConsume(queueName, true, deliverCallback, consumerTag1 -> {});
 
-            for (int i = 0; i < symbolCount; i++) {
-                final String symbol = stockSymbols[new Random().nextInt(stockSymbols.length)];
-                final String value = String.valueOf(i);
-
-                String message = String.format("%s:%s", symbol, value);
-
-                channel.basicPublish("", queueName, null, message.getBytes());
-                System.out.println(" [x] Sent message: " + message + " to queue: " + queueName);
+            while (System.currentTimeMillis() < endTime) {
+                Thread.sleep(50);
             }
 
-            logger.info("{} record(s) sent to Kafka\n", symbolCount);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            channel.basicCancel(consumerTag);
+            return ResponseEntity.ok(messages);
+        }catch (Exception e) {
+            logger.error("Failed to retrieve message from RabbitMQ", e);
+            throw new RuntimeException("Failed to retrieve message from RabbitMQ");
         }
-    }
-
-    @GetMapping("/receiveStockSymbols/{queueName}/{consumeTimeMsec}")
-    public List<String> receiveStockSymbols(@PathVariable String queueName, @PathVariable int consumeTimeMsec) {
-        logger.info(String.format("Reading stock-symbols from queue %s", queueName));
-        List<String> result = new ArrayList<>();
-
-        try (Connection connection = factory.newConnection();
-             Channel channel = connection.createChannel()) {
-
-
-            DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-                String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
-                System.out.printf("[%s]:%s -> %s", queueName, delivery.getEnvelope().getRoutingKey(), message);
-                result.add(message);
-            };
-
-            System.out.println("start consuming events - to stop press CTRL+C");
-            // Consume with Auto-ACK
-            channel.basicConsume(queueName, true, deliverCallback, consumerTag -> {});
-            Thread.sleep(consumeTimeMsec);
-
-            System.out.printf("done consuming events. %d record(s) received\n", result.size());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        return result;
     }
 }

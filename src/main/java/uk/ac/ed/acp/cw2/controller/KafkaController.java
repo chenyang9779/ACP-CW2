@@ -7,6 +7,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StopWatch;
 import org.springframework.web.bind.annotation.*;
 import redis.clients.jedis.Jedis;
@@ -28,12 +29,11 @@ import java.util.concurrent.TimeoutException;
  * and supports security configurations such as SASL and JAAS.
  */
 @RestController()
-@RequestMapping("/api/v1/kafka")
+@RequestMapping("/kafka")
 public class KafkaController {
 
     private static final Logger logger = LoggerFactory.getLogger(KafkaController.class);
     private final RuntimeEnvironment environment;
-    private final String[] stockSymbols = "AAPL,MSFT,GOOG,AMZN,TSLA,JPMC,CATP,UNIL,LLOY".split(",");
 
     public KafkaController(RuntimeEnvironment environment) {
         this.environment = environment;
@@ -46,7 +46,7 @@ public class KafkaController {
      *                     such as Kafka bootstrap servers.
      * @return a Properties object containing configuration properties for Kafka operations.
      */
-    private Properties getKafkaProperties(RuntimeEnvironment environment) {
+    private Properties getKafkaProperties() {
         Properties kafkaProps = new Properties();
         kafkaProps.put("bootstrap.servers", environment.getKafkaBootstrapServers());
         kafkaProps.put("acks", "all");
@@ -74,51 +74,43 @@ public class KafkaController {
         return kafkaProps;
     }
 
-    @PostMapping("/sendStockSymbols/{symbolTopic}/{symbolCount}")
-    public void sendStockSymbols(@PathVariable String symbolTopic, @PathVariable int symbolCount) {
-        logger.info(String.format("Writing %d symbols in topic %s", symbolCount, symbolTopic));
-        Properties kafkaProps = getKafkaProperties(environment);
-
-        try (var producer = new KafkaProducer<String, String>(kafkaProps)) {
-            for (int i = 0; i < symbolCount; i++) {
-                final String key = stockSymbols[new Random().nextInt(stockSymbols.length)];
-                final String value = String.valueOf(i);
-
-                producer.send(new ProducerRecord<>(symbolTopic, key, value), (recordMetadata, ex) -> {
-                    if (ex != null)
-                        ex.printStackTrace();
-                    else
-                        logger.info(String.format("Produced event to topic %s: key = %-10s value = %s%n", symbolTopic, key, value));
-                }).get(1000, TimeUnit.MILLISECONDS);
+    @PutMapping("/{writeTopic}/{messageCount}")
+    public ResponseEntity<Void> putMessage(@PathVariable String writeTopic, @PathVariable int messageCount) {
+        Properties kafkaProps = getKafkaProperties();
+        try (KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProps)) {
+            for (int i = 0; i < messageCount; i++) {
+                String message = String.format("{\"uuid\":\"s2693586\", \"count\":%d}", i);
+                producer.send(new ProducerRecord<>(writeTopic, message));
             }
-            logger.info(String.format("%d record(s) sent to Kafka\n", symbolCount));
-        } catch (ExecutionException e) {
-            logger.error("execution exc: " + e);
-            throw new RuntimeException(e);
-        } catch (TimeoutException e) {
-            logger.error("timeout exc: " + e);
-        } catch (InterruptedException e) {
-            logger.error("interrupted exc: " + e);
-            throw new RuntimeException(e);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.error("Error while sending message", e);
+            throw new RuntimeException("Failed to send messages to kafka");
         }
     }
 
-    @GetMapping("/receiveStockSymbols/{symbolTopic}/{consumeTimeMsec}")
-    public List<AbstractMap.SimpleEntry<String, String>> receiveStockSymbols(@PathVariable String symbolTopic, @PathVariable int consumeTimeMsec) {
-        logger.info(String.format("Reading stock-symbols from topic %s", symbolTopic));
-        Properties kafkaProps = getKafkaProperties(environment);
+    @GetMapping("/{readTopic}/{timeoutInMsec}")
+    public ResponseEntity<List<String>> readMessages(@PathVariable String readTopic, @PathVariable int timeoutInMsec) {
+        Properties kafkaProps = getKafkaProperties();
+        List<String> messages = new ArrayList<>();
 
-        var result = new ArrayList<AbstractMap.SimpleEntry<String, String>>();
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaProps)) {
+            consumer.subscribe(Collections.singletonList(readTopic));
+            long endTime = System.currentTimeMillis() + timeoutInMsec;
 
-        try (var consumer = new KafkaConsumer<String, String>(kafkaProps)) {
-            consumer.subscribe(Collections.singletonList(symbolTopic));
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(consumeTimeMsec));
-            for (ConsumerRecord<String, String> record : records) {
-                logger.info(String.format("[%s] %s: %s %s %s %s", record.topic(), record.key(), record.value(), record.partition(), record.offset(), record.timestamp()));
-                result.add(new AbstractMap.SimpleEntry<>(record.key(), record.value()));
+            while (System.currentTimeMillis() < endTime) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<String, String> record : records) {
+                    messages.add(record.value());
+                }
             }
+            return ResponseEntity.ok(messages);
+        }catch (Exception e) {
+            logger.error("Failed to consume messages from Kafka", e);
+            throw new RuntimeException("Failed to consume messages from Kafka");
         }
-
-        return result;
     }
+
+
+
 }

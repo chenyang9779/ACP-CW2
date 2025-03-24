@@ -1,9 +1,12 @@
 package uk.ac.ed.acp.cw2.controller;
 
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.DeliverCallback;
 import com.rabbitmq.client.impl.Environment;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -47,7 +50,7 @@ public class RabbitMqController {
             channel.queueDeclare(qeueuName, false, false, false, null);
 
             for (int i = 0; i < Integer.parseInt(messageCount); i++) {
-                String messageBody = String.format("{\"uuid\":\"s2693586\", \"count\":%d}", i);
+                String messageBody = String.format("{\"uid\":\"s2693586\", \"count\":%d}", i);
                 channel.basicPublish("", qeueuName, null, messageBody.getBytes(StandardCharsets.UTF_8));
             }
             return ResponseEntity.ok().build();
@@ -67,6 +70,7 @@ public class RabbitMqController {
 
             channel.queueDeclare(queueName, false, false, false, null);
             DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+                logger.info(delivery.getProperties().toString());
                 String messageBody = new String(delivery.getBody(), StandardCharsets.UTF_8);
                 messages.add(messageBody);
             };

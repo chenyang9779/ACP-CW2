@@ -7,7 +7,7 @@ info:
   app:
     name: ACP CW2
     description: Simple ACP CW2 service
-    version: 0.0.1
+    version: 0.0.3
 
 management:
   endpoints:

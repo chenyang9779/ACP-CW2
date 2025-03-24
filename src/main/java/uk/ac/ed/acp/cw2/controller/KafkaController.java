@@ -79,7 +79,7 @@ public class KafkaController {
         Properties kafkaProps = getKafkaProperties();
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProps)) {
             for (int i = 0; i < messageCount; i++) {
-                String message = String.format("{\"uuid\":\"s2693586\", \"count\":%d}", i);
+                String message = String.format("{\"uid\":\"s2693586\", \"count\":%d}", i);
                 producer.send(new ProducerRecord<>(writeTopic, message));
             }
             return ResponseEntity.ok().build();

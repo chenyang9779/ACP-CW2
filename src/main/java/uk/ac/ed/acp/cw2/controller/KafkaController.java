@@ -123,10 +123,10 @@ public class KafkaController {
                         "{" +
                                 "\"uid\":\"s2693586\"," +
                                 "\"key\":\"%s\"," +
-                                "\"comment\":\"\"," +
+                                "\"comment\":\"%s\"," +
                                 "\"value\":%.1f" +
                                 "}",
-                        key, value
+                        key, key, value
                 );
 
                 producer.send(new ProducerRecord<>(topicName, messageJson));

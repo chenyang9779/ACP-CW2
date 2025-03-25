@@ -43,7 +43,7 @@ public class KafkaController {
      * Constructs Kafka properties required for KafkaProducer and KafkaConsumer configuration.
      *
      * @param environment the runtime environment providing dynamic configuration details
-     *                     such as Kafka bootstrap servers.
+     *                    such as Kafka bootstrap servers.
      * @return a Properties object containing configuration properties for Kafka operations.
      */
     private Properties getKafkaProperties() {
@@ -105,12 +105,40 @@ public class KafkaController {
                 }
             }
             return ResponseEntity.ok(messages);
-        }catch (Exception e) {
+        } catch (Exception e) {
             logger.error("Failed to consume messages from Kafka", e);
             throw new RuntimeException("Failed to consume messages from Kafka");
         }
     }
 
+    @PutMapping("/example/{topicName}")
+    public ResponseEntity<Void> putExampleMessages(@PathVariable String topicName) {
+        Properties kafkaProps = getKafkaProperties();
+        try (KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProps)) {
+            String[] keys = {"AAA", "ABCD", "ABCDE"};
+            double value = 10.5;
+
+            for (String key : keys) {
+                String messageJson = String.format(
+                        "{" +
+                                "\"uid\":\"s2693586\"," +
+                                "\"key\":\"%s\"," +
+                                "\"comment\":\"\"," +
+                                "\"value\":%.1f" +
+                                "}",
+                        key, value
+                );
+
+                producer.send(new ProducerRecord<>(topicName, messageJson));
+            }
+
+            return ResponseEntity.ok().build();
+
+        } catch (Exception e) {
+            logger.error("Error while sending example messages to Kafka", e);
+            throw new RuntimeException("Failed to send example messages to Kafka", e);
+        }
+    }
 
 
 }

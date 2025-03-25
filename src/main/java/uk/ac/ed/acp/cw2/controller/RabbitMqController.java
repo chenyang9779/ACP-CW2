@@ -43,9 +43,9 @@ public class RabbitMqController {
     }
 
     @PutMapping("/{qeueuName}/{messageCount}")
-    public ResponseEntity<Void> put(@PathVariable String qeueuName, @PathVariable String messageCount){
+    public ResponseEntity<Void> put(@PathVariable String qeueuName, @PathVariable String messageCount) {
         try (Connection connection = connectionFactory.newConnection();
-            Channel channel = connection.createChannel()) {
+             Channel channel = connection.createChannel()) {
 
             channel.queueDeclare(qeueuName, false, false, false, null);
 
@@ -61,7 +61,7 @@ public class RabbitMqController {
     }
 
     @GetMapping("/{queueName}/{timeoutInMsec}")
-    public ResponseEntity<List<String>> getMessages(@PathVariable String queueName, @PathVariable String timeoutInMsec){
+    public ResponseEntity<List<String>> getMessages(@PathVariable String queueName, @PathVariable String timeoutInMsec) {
         List<String> messages = new ArrayList<>();
         long endTime = System.currentTimeMillis() + Long.parseLong(timeoutInMsec);
 
@@ -74,7 +74,8 @@ public class RabbitMqController {
                 String messageBody = new String(delivery.getBody(), StandardCharsets.UTF_8);
                 messages.add(messageBody);
             };
-            String consumerTag = channel.basicConsume(queueName, true, deliverCallback, consumerTag1 -> {});
+            String consumerTag = channel.basicConsume(queueName, true, deliverCallback, consumerTag1 -> {
+            });
 
             while (System.currentTimeMillis() < endTime) {
                 Thread.sleep(50);
@@ -82,7 +83,7 @@ public class RabbitMqController {
 
             channel.basicCancel(consumerTag);
             return ResponseEntity.ok(messages);
-        }catch (Exception e) {
+        } catch (Exception e) {
             logger.error("Failed to retrieve message from RabbitMQ", e);
             throw new RuntimeException("Failed to retrieve message from RabbitMQ");
         }

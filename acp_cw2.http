@@ -1,18 +1,42 @@
-### PUT to store something in the cache
-PUT http://127.0.0.1:8080/cache/myKey/This%20is%20a%20string%20for%20the%20tutorial
-###
+### 1) PUT RabbitMQ: Write 10 messages to a queue named "testQueue"
+PUT http://127.0.0.1:8080/rabbitMq/testQueue/10
 
-### GET request to retrieve the data
-GET http://127.0.0.1:8080/cache/myKey
-###
-
-### create 1000 stock symbols in topic stockvalues (has to be created before)
-POST http://127.0.0.1:8080/kafka/sendStockSymbols/stockvalues/1000
-###
-
-### receive stock symbols within 4000 msec from topic stockvalues
-GET http://127.0.0.1:8080/kafka/receiveStockSymbols/stockvalues/6000
-###
+### 2) GET RabbitMQ: Read messages from "testQueue" with a timeout of 500 ms
+GET http://127.0.0.1:8080/rabbitMq/goodQueue/500
 
 
+### 3) PUT Kafka: Write 5 messages to a topic named "testTopic"
+PUT http://127.0.0.1:8080/kafka/testTopic/5
+
+### 4) GET Kafka: Read from "testTopic" with a 2000 ms timeout
+GET http://127.0.0.1:8080/kafka/testTopic/5000
+
 ###
+PUT http://localhost:8080/kafka/example/testTopic
+
+
+### 5) POST processMessages
+# Reads 5 messages from "testTopic" in Kafka.
+# "good" messages go to a Rabbit queue named "goodQueue"
+# "bad" messages go to a Rabbit queue named "badQueue"
+POST http://127.0.0.1:8080/processMessages
+Content-Type: application/json
+
+{
+  "readTopic": "testTopic1",
+  "writeQueueGood": "goodQueue",
+  "writeQueueBad": "badQueue",
+  "messageCount": 3
+}
+
+
+### 6) POST transformMessages (if you have implemented it)
+# Example: read 5 messages from 'someQueue' (Rabbit) -> transform -> write to 'someOtherQueue'
+POST http://127.0.0.1:8080/transformMessages
+Content-Type: application/json
+
+{
+  "readQueue": "someQueue",
+  "writeQueue": "someOtherQueue",
+  "messageCount": 5
+}

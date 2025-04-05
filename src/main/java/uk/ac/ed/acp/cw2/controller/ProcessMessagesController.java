@@ -132,25 +132,31 @@ public class ProcessMessagesController {
     }
 
     private Properties buildKafkaProperties() {
-        Properties props = new Properties();
-        props.put("bootstrap.servers", environment.getKafkaBootstrapServers());
-        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("auto.offset.reset", "earliest");
-        props.put("enable.auto.commit", "true");
+        Properties kafkaProps = new Properties();
+        kafkaProps.put("bootstrap.servers", environment.getKafkaBootstrapServers());
+        kafkaProps.put("acks", "all");
+        kafkaProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        kafkaProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        kafkaProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        kafkaProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        kafkaProps.setProperty("enable.auto.commit", "true");
+        kafkaProps.put("acks", "all");
 
-        props.put("group.id", UUID.randomUUID().toString());
+        kafkaProps.put("group.id", UUID.randomUUID().toString());
+        kafkaProps.setProperty("auto.offset.reset", "earliest");
+        kafkaProps.setProperty("enable.auto.commit", "true");
 
         if (environment.getKafkaSecurityProtocol() != null) {
-            props.put("security.protocol", environment.getKafkaSecurityProtocol());
+            kafkaProps.put("security.protocol", environment.getKafkaSecurityProtocol());
         }
         if (environment.getKafkaSaslMechanism() != null) {
-            props.put("sasl.mechanism", environment.getKafkaSaslMechanism());
+            kafkaProps.put("sasl.mechanism", environment.getKafkaSaslMechanism());
         }
         if (environment.getKafkaSaslJaasConfig() != null) {
-            props.put("sasl.jaas.config", environment.getKafkaSaslJaasConfig());
+            kafkaProps.put("sasl.jaas.config", environment.getKafkaSaslJaasConfig());
         }
-        return props;
+
+        return kafkaProps;
     }
 
     private String storeInAcp(Map<String, Object> messageData) {

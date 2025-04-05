@@ -36,13 +36,15 @@ services:
     #      - acp_network
     ports:
       - "5672:5672"
+      - "15672:15672"
 
   redis:
-    image: redis
+    image: redis/redis-stack:latest
     #    networks:
     #      - acp_network
     ports:
       - "6379:6379"
+      - "8001:8001"
 
 networks:
   acp_network:

@@ -88,4 +88,42 @@ public class RabbitMqController {
             throw new RuntimeException("Failed to retrieve message from RabbitMQ");
         }
     }
+
+    @PutMapping("/testTransformData/{queueName}")
+    public ResponseEntity<Void> putTestTransformMessages(@PathVariable String queueName) {
+        try (
+                Connection connection = connectionFactory.newConnection();
+                Channel channel = connection.createChannel()
+        ) {
+            channel.queueDeclare(queueName, false, false, false, null);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            List<Map<String, Object>> testMessages = getMaps();
+
+            for (Map<String, Object> msg : testMessages) {
+                String json = objectMapper.writeValueAsString(msg);
+                channel.basicPublish("", queueName, null, json.getBytes(StandardCharsets.UTF_8));
+            }
+
+            return ResponseEntity.ok().build();
+
+        } catch (Exception e) {
+            logger.error("Failed to publish test transform messages", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    private static List<Map<String, Object>> getMaps() {
+        Map<String, Object> msg1 = Map.of("key", "ABC", "version", 1, "value", 100.0);
+        Map<String, Object> msg2 = Map.of("key", "ABC", "version", 1, "value", 200.0);
+        Map<String, Object> msg3 = Map.of("key", "ABC", "version", 3, "value", 400.0);
+        Map<String, Object> msg4 = Map.of("key", "ABC", "version", 2, "value", 200.0);
+        Map<String, Object> msg5 = Map.of("key", "ABC");
+        Map<String, Object> msg6 = Map.of("key", "ABC", "version", 2, "value", 200.0);
+
+        List<Map<String, Object>> testMessages = List.of(msg1, msg2, msg3, msg4, msg5, msg6);
+        return testMessages;
+    }
+
 }

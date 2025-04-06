@@ -107,7 +107,8 @@ public class TransformMessagesController {
                     tombstoneStats.put("totalAdded", totalAdded);
 
                     String json = objectMapper.writeValueAsString(tombstoneStats);
-                    jedis.rpush(request.getWriteQueue(), json);
+                    channel.basicPublish("", request.getWriteQueue(), null, json.getBytes(StandardCharsets.UTF_8));
+
 
                     totalMessagesWritten++;
                 } else {
@@ -128,7 +129,8 @@ public class TransformMessagesController {
                         messageMap.put("value", updatedValue);
 
                         String json = objectMapper.writeValueAsString(messageMap);
-                        jedis.rpush(request.getWriteQueue(), json);
+                        channel.basicPublish("", request.getWriteQueue(), null, json.getBytes(StandardCharsets.UTF_8));
+
 
                         totalMessagesWritten++;
                         totalValueWritten += updatedValue;
@@ -146,14 +148,16 @@ public class TransformMessagesController {
 
                             messageMap.put("value", updatedValue);
                             String json = objectMapper.writeValueAsString(messageMap);
-                            jedis.rpush(request.getWriteQueue(), json);
+                            channel.basicPublish("", request.getWriteQueue(), null, json.getBytes(StandardCharsets.UTF_8));
+
 
                             totalMessagesWritten++;
                             totalValueWritten += updatedValue;
                         } else {
 
                             String json = objectMapper.writeValueAsString(messageMap);
-                            jedis.rpush(request.getWriteQueue(), json);
+                            channel.basicPublish("", request.getWriteQueue(), null, json.getBytes(StandardCharsets.UTF_8));
+
 
                             totalMessagesWritten++;
                             totalValueWritten += oldValue;

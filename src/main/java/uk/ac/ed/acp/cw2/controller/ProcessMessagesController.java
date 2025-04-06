@@ -87,6 +87,7 @@ public class ProcessMessagesController {
                         msgData.put("runningTotalValue", runningTotalGood);
 
                         String uuid = storeInAcp(msgData);
+                        logger.info(uuid);
 
                         msgData.put("uuid", uuid);
 
@@ -166,7 +167,7 @@ public class ProcessMessagesController {
             return restTemplate.postForObject(
                     baseUrl + "/api/v1/blob",
                     messageData,
-                    String.class);
+                    String.class).replace("\"", "");
         } catch (Exception e) {
             logger.error("Failed to store in ACP", e);
             throw new RuntimeException("Could not store message in ACP", e);

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+// import org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -30,7 +31,7 @@ public class ProcessMessagesController {
     private final ConnectionFactory connectionFactory; // For Rabbit
     private final ObjectMapper objectMapper; // For JSON
     private final RestTemplate restTemplate; // For ACP calls
-    private Properties kafkaProps;
+    // private Properties kafkaProps;
 
     public ProcessMessagesController(RuntimeEnvironment environment) {
         this.environment = environment;
@@ -162,10 +163,12 @@ public class ProcessMessagesController {
 
     private String storeInAcp(Map<String, Object> messageData) {
         String baseUrl = environment.getAcpStorageService();
-
+        if (!baseUrl.endsWith("/")){
+            baseUrl += "/";
+        }
         try {
             return restTemplate.postForObject(
-                    baseUrl + "/api/v1/blob",
+                    baseUrl + "api/v1/blob",
                     messageData,
                     String.class).replace("\"", "");
         } catch (Exception e) {

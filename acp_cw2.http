@@ -2,7 +2,7 @@
 PUT http://127.0.0.1:8080/rabbitMq/testQueue/10
 
 ### 2) GET RabbitMQ: Read messages from "testQueue" with a timeout of 500 ms
-GET http://127.0.0.1:8080/rabbitMq/goodQueue/500
+GET http://127.0.0.1:8080/rabbitMq/testQueue/500
 
 
 ### 3) PUT Kafka: Write 5 messages to a topic named "testTopic"

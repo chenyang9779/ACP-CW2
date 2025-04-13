@@ -1,3 +1,6 @@
 .idea
 
 target
+submit
+*.tar
+*,zip

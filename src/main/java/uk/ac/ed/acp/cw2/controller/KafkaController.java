@@ -8,17 +8,17 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StopWatch;
+// import org.springframework.util.StopWatch;
 import org.springframework.web.bind.annotation.*;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+// import redis.clients.jedis.Jedis;
+// import redis.clients.jedis.JedisPool;
 import uk.ac.ed.acp.cw2.data.RuntimeEnvironment;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+// import java.util.concurrent.ExecutionException;
+// import java.util.concurrent.TimeUnit;
+// import java.util.concurrent.TimeoutException;
 
 /**
  * KafkaController is a REST API controller used to interact with Apache Kafka for producing
